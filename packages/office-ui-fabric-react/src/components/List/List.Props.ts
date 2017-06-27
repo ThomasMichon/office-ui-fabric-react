@@ -75,6 +75,12 @@ export interface IListProps extends React.HTMLAttributes<List | HTMLDivElement> 
 
   /** Number of items to render. Defaults to items.length. */
   renderCount?: number;
+
+  getCellStyle?: (item: any, index: number) => any;
+
+  getPageClassName?: (page: IPage) => string;
+
+  getCellClassName?: (item: any, index: number) => string;
 }
 
 export interface IPage {

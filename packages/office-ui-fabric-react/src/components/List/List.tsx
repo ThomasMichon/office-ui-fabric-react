@@ -318,7 +318,13 @@ export class List extends BaseComponent<IListProps, IListState> implements IList
   }
 
   private _renderPage(page: IPage): any {
-    let { onRenderCell, role } = this.props;
+    let {
+      onRenderCell,
+      role,
+      getCellStyle,
+      getPageClassName,
+      getCellClassName
+    } = this.props;
     let cells = [];
     let pageStyle = this._getPageStyle(page);
 
@@ -338,14 +344,22 @@ export class List extends BaseComponent<IListProps, IListState> implements IList
       }
 
       cells.push(
-        <div role={ role } className='ms-List-cell' key={ itemKey } data-list-index={ i + page.startIndex } data-automationid='ListCell'>
+        <div role={ role }
+          className={ css('ms-List-cell', getCellClassName && getCellClassName(item, page.startIndex + 1)) }
+          style={ getCellStyle && getCellStyle(item, page.startIndex + 1) || {} }
+          key={ itemKey }
+          data-list-index={ i + page.startIndex }
+          data-automationid='ListCell'>
           { onRenderCell(item, page.startIndex + i) }
         </div>
       );
     }
 
     return (
-      <div className='ms-List-page' key={ page.key } ref={ page.key } style={ pageStyle } role='presentation'>
+      <div role='presentation'
+        className={ css('ms-List-page', getPageClassName && getPageClassName(page)) }
+        key={ page.key } ref={ page.key }
+        style={ pageStyle }>
         { cells }
       </div>
     );
@@ -357,7 +371,7 @@ export class List extends BaseComponent<IListProps, IListState> implements IList
     let { getPageStyle } = this.props;
 
     if (getPageStyle) {
-      style = getPageStyle(page);
+      style = getPageStyle(page) || {};
     }
 
     if (!page.items) {
