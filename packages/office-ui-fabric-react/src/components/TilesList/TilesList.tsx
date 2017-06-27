@@ -1,9 +1,6 @@
 
 import * as React from 'react';
-
-export interface ITilesListProps extends React.Props<TilesList> {
-
-}
+import { ITilesListProps } from './TilesList.Props';
 
 export interface ITilesListState {
 

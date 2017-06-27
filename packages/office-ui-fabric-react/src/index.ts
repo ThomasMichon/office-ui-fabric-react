@@ -50,6 +50,7 @@ export * from './Styling';
 export * from './SwatchColorPicker';
 export * from './TeachingBubble';
 export * from './TextField';
+export * from './TilesList';
 export * from './Toggle';
 export * from './Tooltip';
 export * from './Utilities';
