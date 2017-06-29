@@ -294,7 +294,7 @@ export class List extends BaseComponent<IListProps, IListState> implements IList
   }
 
   public render() {
-    let { className, role } = this.props;
+    let { className, role, surfaceClassName } = this.props;
     let { pages } = this.state;
     let pageElements = [];
     let divProps = getNativeProps(this.props, divProperties);
@@ -310,7 +310,7 @@ export class List extends BaseComponent<IListProps, IListState> implements IList
 
     return (
       <div ref='root' { ...divProps } role={ role } className={ css('ms-List', className) } >
-        <div ref='surface' className='ms-List-surface' role='presentation'>
+        <div ref='surface' className={ css('ms-List-surface', surfaceClassName) } role='presentation'>
           { pageElements }
         </div>
       </div>

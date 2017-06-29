@@ -81,6 +81,8 @@ export interface IListProps extends React.HTMLAttributes<List | HTMLDivElement> 
   getPageClassName?: (page: IPage) => string;
 
   getCellClassName?: (item: any, index: number) => string;
+
+  surfaceClassName?: string;
 }
 
 export interface IPage {

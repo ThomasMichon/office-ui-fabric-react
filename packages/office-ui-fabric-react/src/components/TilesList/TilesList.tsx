@@ -26,6 +26,7 @@ export class TilesList<TItem> extends React.Component<ITilesListProps<TItem>, IT
         getPageStyle={ this._onGetPageStyle }
         getCellStyle={ this._onGetCellStyle }
         getItemCountForPage={ this._onGetItemCountPerPage }
+        surfaceClassName={ TilesListStyles.listSurface }
       />
     );
   }
@@ -40,24 +41,22 @@ export class TilesList<TItem> extends React.Component<ITilesListProps<TItem>, IT
     const itemWidthOverHeight = getItemAspectRatio && getItemAspectRatio(item) || 1;
     const itemHeightOverWidth = 1 / itemWidthOverHeight;
 
-    const height = 150;
-    const width = itemWidthOverHeight * height;
-
     return (
       <div
+        role='presentation'
         className={ css(TilesListStyles.cell) }
+        style={
+          {
+            paddingTop: `${(100 * itemHeightOverWidth).toFixed(2)}%`
+          }
+        }
       >
         <div
-          role='presentation'
-          className={ css(TilesListStyles.sizer) }
-          style={
-            {
-              paddingTop: `${(100 * itemHeightOverWidth).toFixed(2)}%`
-            }
-          }
-        />
-
-        <div className={ css(TilesListStyles.cellContent) }>{ onRenderCell && onRenderCell(item) }</div>
+          role='presenation'
+          className={ css(TilesListStyles.cellContent) }
+        >
+          { onRenderCell && onRenderCell(item) }
+        </div>
       </div>
     );
   }
@@ -95,7 +94,8 @@ export class TilesList<TItem> extends React.Component<ITilesListProps<TItem>, IT
     const width = itemWidthOverHeight * height;
 
     return {
-      flex: `${itemWidthOverHeight} ${itemWidthOverHeight} auto`,
+      flex: `${itemWidthOverHeight} ${itemWidthOverHeight} ${width}px`,
+      minHeight: `${height}px`,
       minWidth: `${width}px`,
       maxWidth: `${width * 1.2}px`
     };
