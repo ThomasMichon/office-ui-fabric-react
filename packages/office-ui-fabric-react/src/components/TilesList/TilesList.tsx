@@ -2,6 +2,8 @@
 import * as React from 'react';
 import { ITilesListProps } from './TilesList.Props';
 import { List } from '../../List';
+import { FocusZone, FocusZoneDirection } from '../../FocusZone';
+import { SelectionZone, Selection, SelectionMode } from '../../utilities/selection/index';
 import { autobind, css } from '../../Utilities';
 import * as TilesListStylesModule from './TilesList.scss';
 
@@ -12,22 +14,41 @@ export interface ITilesListState {
 }
 
 export class TilesList<TItem> extends React.Component<ITilesListProps<TItem>, ITilesListState> {
+  private _selection: Selection;
+
+  constructor(props: ITilesListProps<TItem>, context: any) {
+    super(props, context);
+
+    const {
+      selection = new Selection()
+    } = props;
+
+    this._selection = selection;
+  }
+
   public render() {
     const {
       items
     } = this.props;
 
     return (
-      <List
-        items={ items }
-        onRenderCell={ this._onRenderCell }
-        getCellClassName={ this._onGetCellClassName }
-        getPageClassName={ this._onGetPageClassName }
-        getPageStyle={ this._onGetPageStyle }
-        getCellStyle={ this._onGetCellStyle }
-        getItemCountForPage={ this._onGetItemCountPerPage }
-        surfaceClassName={ TilesListStyles.listSurface }
-      />
+      <FocusZone
+        direction={ FocusZoneDirection.bidirectional }>
+        <SelectionZone
+          selection={ this._selection }
+          selectionMode={ SelectionMode.multiple }>
+          <List
+            items={ items }
+            onRenderCell={ this._onRenderCell }
+            getCellClassName={ this._onGetCellClassName }
+            getPageClassName={ this._onGetPageClassName }
+            getPageStyle={ this._onGetPageStyle }
+            getCellStyle={ this._onGetCellStyle }
+            getItemCountForPage={ this._onGetItemCountPerPage }
+            surfaceClassName={ TilesListStyles.listSurface }
+          />
+        </SelectionZone>
+      </FocusZone>
     );
   }
 
@@ -52,7 +73,7 @@ export class TilesList<TItem> extends React.Component<ITilesListProps<TItem>, IT
         }
       >
         <div
-          role='presenation'
+          role='presentation'
           className={ css(TilesListStyles.cellContent) }
         >
           { onRenderCell && onRenderCell(item) }
