@@ -66,7 +66,8 @@
 
   .tile.selected &,
   .tile:hover &,
-  .tile:focus & {
+  .tile:focus &,
+  &:focus {
     opacity: 1;
   }
 }

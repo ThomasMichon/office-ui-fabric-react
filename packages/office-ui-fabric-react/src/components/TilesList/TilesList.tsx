@@ -33,7 +33,8 @@ export class TilesList<TItem> extends React.Component<ITilesListProps<TItem>, IT
 
     return (
       <FocusZone
-        direction={ FocusZoneDirection.bidirectional }>
+        direction={ FocusZoneDirection.bidirectional }
+      >
         <SelectionZone
           selection={ this._selection }
           selectionMode={ SelectionMode.multiple }>

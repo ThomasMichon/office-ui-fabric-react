@@ -21,27 +21,68 @@ export interface ITileState {
  * @extends {React.Component<ITileProps, ITileState>}
  */
 export class Tile extends BaseComponent<ITileProps, ITileState> {
-  private _selection: Selection;
-
   constructor(props: ITileProps, context: any) {
     super(props, context);
 
-    this._selection = props.selection;
-
     const {
-      selectionIndex
+      selectionIndex,
+      selection
     } = props;
 
-    const isSelected = !!this._selection && selectionIndex > 1 && this._selection.isIndexSelected(selectionIndex);
+    const isSelected = !!selection && selectionIndex > 1 && selection.isIndexSelected(selectionIndex);
 
     this.state = {
       isSelected: isSelected
     };
   }
 
+  public componentWillReceiveProps(nextProps: ITileProps) {
+    const {
+      selection,
+      selectionIndex
+    } = this.props;
+
+    const {
+      selection: nextSelection,
+      selectionIndex: nextSelectionIndex
+    } = nextProps;
+
+    if (selection !== nextSelection || selectionIndex !== nextSelectionIndex) {
+      const isSelected = !!nextSelection && nextSelectionIndex > 1 && nextSelection.isIndexSelected(nextSelectionIndex);
+
+      this.setState({
+        isSelected: isSelected
+      });
+    }
+  }
+
   public componentDidMount() {
-    if (this._selection) {
-      this._events.on(this._selection, SELECTION_CHANGE, this._onSelectionChange);
+    const {
+      selection
+    } = this.props;
+
+    if (selection) {
+      this._events.on(selection, SELECTION_CHANGE, this._onSelectionChange);
+    }
+  }
+
+  public componentDidUpdate(previousProps: ITileProps) {
+    const {
+      selection
+    } = this.props;
+
+    const {
+      selection: previousSelection
+    } = previousProps;
+
+    if (selection !== previousSelection) {
+      if (previousSelection) {
+        this._events.off(previousSelection);
+      }
+
+      if (selection) {
+        this._events.on(selection, SELECTION_CHANGE, this._onSelectionChange);
+      }
     }
   }
 
@@ -63,12 +104,12 @@ export class Tile extends BaseComponent<ITileProps, ITileState> {
         [TileStyles.selected]: isSelected
       }) }
         data-is-focusable={ true }
+        data-is-sub-focuszone={ true }
         data-selection-index={ (selectionIndex > -1) ? selectionIndex : undefined }>
         <div className={ css('ms-Tile-content') }>
           { children }
         </div>
         <button className={ css('ms-Tile-check', TileStyles.check) }
-          data-is-focusable={ false }
           data-selection-toggle={ true }
           role='checkbox'>
           <Check
@@ -82,11 +123,12 @@ export class Tile extends BaseComponent<ITileProps, ITileState> {
   @autobind
   private _onSelectionChange() {
     const {
-          selectionIndex
-        } = this.props;
+      selection,
+      selectionIndex
+    } = this.props;
 
     this.setState({
-      isSelected: selectionIndex > -1 && this._selection.isIndexSelected(selectionIndex)
+      isSelected: selectionIndex > -1 && selection.isIndexSelected(selectionIndex)
     });
   }
 }
