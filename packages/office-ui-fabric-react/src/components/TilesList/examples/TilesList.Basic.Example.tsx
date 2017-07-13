@@ -1,8 +1,9 @@
 
 import * as React from 'react';
-import { TilesList } from '../../TilesList';
+import { TilesList, ITilesGridSegment, ITilesGridItem, TilesGridMode } from '../../TilesList';
 import { Tile, TileMode } from '../../Tile';
 import { Selection } from '../../../utilities/selection/Selection';
+import { MarqueeSelection } from '../../../MarqueeSelection';
 import { autobind } from '../../../Utilities';
 
 type IAspectRatioByProbability = { [probability: string]: number; };
@@ -31,7 +32,9 @@ const ITEMS = (Array.apply(null, { length: 1000 }) as undefined[]).map((value: u
   };
 });
 
-declare class TilesListClass extends TilesList<typeof ITEMS[0]> { }
+type ExampleItem = typeof ITEMS[0];
+
+declare class TilesListClass extends TilesList<ExampleItem> { }
 
 const TilesListType: typeof TilesListClass = TilesList;
 
@@ -42,33 +45,46 @@ export class TilesListBasicExample extends React.Component<any, any> {
     super();
 
     this._selection = new Selection({
-      getKey: (item: typeof ITEMS[0]) => item.key,
+      getKey: (item: ExampleItem) => item.key,
     });
 
     this._selection.setItems(ITEMS);
   }
   public render() {
+    const items: ITilesGridSegment<ExampleItem>[] = [
+      {
+        items: ITEMS.map((item: ExampleItem): ITilesGridItem<ExampleItem> => {
+          return {
+            content: item,
+            desiredSize: {
+              width: 100 * item.aspectRatio,
+              height: 100
+            },
+            onRender: this._onRenderCell
+          };
+        }),
+        margin: 8,
+        rowHeight: 100,
+        mode: TilesGridMode.fill
+      }
+    ];
+
     return (
       <div style={ { padding: '4px' } }>
         <div>Start</div>
-        <TilesListType
-          selection={ this._selection }
-          items={ ITEMS }
-          getItemAspectRatio={ this._onGetItemAspectRatio }
-          onRenderCell={ this._onRenderCell }
-        />
+        <MarqueeSelection selection={ this._selection }>
+          <TilesListType
+            selection={ this._selection }
+            items={ items }
+          />
+        </MarqueeSelection>
         <div>End</div>
       </div>
     );
   }
 
   @autobind
-  private _onGetItemAspectRatio(item: typeof ITEMS[0]): number {
-    return item && item.aspectRatio || 1;
-  }
-
-  @autobind
-  private _onRenderCell(item: typeof ITEMS[0]) {
+  private _onRenderCell(item: ExampleItem) {
     return (
       <Tile
         selection={ this._selection }

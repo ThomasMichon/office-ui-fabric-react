@@ -2,7 +2,6 @@
 import * as React from 'react';
 import { ITileProps, TileMode } from './Tile.Props';
 import { Check } from '../../Check';
-import { Selection } from '../../utilities/selection/Selection';
 import { SELECTION_CHANGE } from '../../utilities/selection/interfaces';
 import { css, BaseComponent, autobind } from '../../Utilities';
 import * as TileStylesModule from './Tile.scss';

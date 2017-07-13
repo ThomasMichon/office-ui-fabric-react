@@ -10,25 +10,31 @@
   background-color: $ms-color-white;
   transition: transform 0.1s linear;
 
-  &.iconContent {
+  &:hover {
+    background-color: $ms-color-neutralLighter;
+
     &.selected {
-      background-color: $ms-color-neutralLight;
+      background-color: #DADADA;
     }
+  }
 
-    &:hover {
-      background-color: $ms-color-neutralLighter;
+  &.selected {
+    background-color: $ms-color-neutralLight;
+  }
 
-      &.selected {
-        background-color: #DADADA;
-      }
+  &:focus {
+    background-color: $ms-color-neutralLighter;
+
+    &.selected {
+      background-color: #DADADA; // Todo need a color variable.
     }
+  }
 
+  &.iconContent {
     &:focus {
-      background-color: $ms-color-neutralLighter;
       outline: 1px solid $ms-color-neutralSecondary;
 
       &.selected {
-        background-color: #DADADA; // Todo need a color variable.
         outline: 1px solid $ms-color-themePrimary;
       }
     }
@@ -47,6 +53,18 @@
       &.selected {
         outline: 1px solid $ms-color-themePrimary;
       }
+    }
+
+    &:after {
+      content: '';
+      display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      right: 0;
+      pointer-events: none;
+      border: 2px solid $ms-color-white;
     }
   }
 

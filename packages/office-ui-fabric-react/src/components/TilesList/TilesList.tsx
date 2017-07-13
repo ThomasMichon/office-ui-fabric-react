@@ -1,6 +1,6 @@
 
 import * as React from 'react';
-import { ITilesListProps } from './TilesList.Props';
+import { ITilesListProps, ITilesGridItem, ITilesHeaderItem, ITilesGridSegment, TilesGridMode } from './TilesList.Props';
 import { List } from '../../List';
 import { FocusZone, FocusZoneDirection } from '../../FocusZone';
 import { SelectionZone, Selection, SelectionMode } from '../../utilities/selection/index';
@@ -13,54 +13,61 @@ export interface ITilesListState {
 
 }
 
-export class TilesList<TItem> extends React.Component<ITilesListProps<TItem>, ITilesListState> {
-  private _selection: Selection;
+interface ITileCell<TItem> {
+  content: TItem;
+  aspectRatio: number;
+  rowHeight: number;
+  mode: TilesGridMode;
+  margin: number;
+  onRender(content: TItem, finalSize: { width: number; height: number; }): React.ReactNode | React.ReactNode[];
+}
 
+export class TilesList<TItem> extends React.Component<ITilesListProps<TItem>, ITilesListState> {
   constructor(props: ITilesListProps<TItem>, context: any) {
     super(props, context);
-
-    const {
-      selection = new Selection()
-    } = props;
-
-    this._selection = selection;
   }
 
   public render() {
     const {
-      items
+      items,
+      selection
     } = this.props;
+
+    const cells = this._getCells(items);
+
+    const list = (
+      <List
+        items={ cells }
+        onRenderCell={ this._onRenderCell }
+        getCellClassName={ this._onGetCellClassName }
+        getPageClassName={ this._onGetPageClassName }
+        getPageStyle={ this._onGetPageStyle }
+        getCellStyle={ this._onGetCellStyle }
+        getItemCountForPage={ this._onGetItemCountPerPage }
+        surfaceClassName={ TilesListStyles.listSurface }
+      />
+    );
 
     return (
       <FocusZone
         direction={ FocusZoneDirection.bidirectional }
       >
-        <SelectionZone
-          selection={ this._selection }
-          selectionMode={ SelectionMode.multiple }>
-          <List
-            items={ items }
-            onRenderCell={ this._onRenderCell }
-            getCellClassName={ this._onGetCellClassName }
-            getPageClassName={ this._onGetPageClassName }
-            getPageStyle={ this._onGetPageStyle }
-            getCellStyle={ this._onGetCellStyle }
-            getItemCountForPage={ this._onGetItemCountPerPage }
-            surfaceClassName={ TilesListStyles.listSurface }
-          />
-        </SelectionZone>
+        {
+          selection ?
+            <SelectionZone
+              selection={ selection }
+              selectionMode={ SelectionMode.multiple }>
+              { list }
+            </SelectionZone> :
+            { list }
+        }
       </FocusZone>
     );
   }
 
   @autobind
-  private _onRenderCell(item: TItem) {
-    const {
-      getItemAspectRatio,
-      onRenderCell
-    } = this.props;
-
-    const itemWidthOverHeight = getItemAspectRatio && getItemAspectRatio(item) || 1;
+  private _onRenderCell(item: ITileCell<TItem>) {
+    const itemWidthOverHeight = item.aspectRatio;
     const itemHeightOverWidth = 1 / itemWidthOverHeight;
 
     return (
@@ -77,7 +84,7 @@ export class TilesList<TItem> extends React.Component<ITilesListProps<TItem>, IT
           role='presentation'
           className={ css(TilesListStyles.cellContent) }
         >
-          { onRenderCell && onRenderCell(item) }
+          { item.onRender(item.content, { width: 0, height: 0 }) }
         </div>
       </div>
     );
@@ -104,22 +111,56 @@ export class TilesList<TItem> extends React.Component<ITilesListProps<TItem>, IT
   }
 
   @autobind
-  private _onGetCellStyle(item: TItem): any {
-    const {
-      getItemAspectRatio
-    } = this.props;
-
-    const itemWidthOverHeight = getItemAspectRatio && getItemAspectRatio(item) || 1;
+  private _onGetCellStyle(item: ITileCell<TItem>): any {
+    const itemWidthOverHeight = item.aspectRatio || 1;
     const itemHeightOverWidth = 1 / itemWidthOverHeight;
+    const margin = item.margin;
 
-    const height = 150;
+    const isFill = item.mode === TilesGridMode.fill;
+
+    const height = item.rowHeight;
     const width = itemWidthOverHeight * height;
 
     return {
       flex: `${itemWidthOverHeight} ${itemWidthOverHeight} ${width}px`,
       minHeight: `${height}px`,
       minWidth: `${width}px`,
-      maxWidth: `${width * 1.2}px`
+      maxWidth: isFill ? `${width * 1.2}px` : `${width}px`,
+      margin: `${margin}px`
     };
   }
+
+  private _getCells(items: (ITilesGridSegment<TItem> | ITilesHeaderItem<TItem>)[]): ITileCell<TItem>[] {
+    const cells: ITileCell<TItem>[] = [];
+
+    for (const item of items) {
+      if (isGridSegment(item)) {
+        for (const gridItem of item.items) {
+          cells.push({
+            aspectRatio: gridItem.desiredSize.width / gridItem.desiredSize.height,
+            content: gridItem.content,
+            onRender: gridItem.onRender,
+            rowHeight: item.rowHeight,
+            margin: item.margin,
+            mode: item.mode
+          });
+        }
+      } else {
+        cells.push({
+          aspectRatio: 1,
+          content: item.content,
+          onRender: item.onRender,
+          rowHeight: 0,
+          margin: 0,
+          mode: TilesGridMode.fill
+        });
+      }
+    }
+
+    return cells;
+  }
+}
+
+function isGridSegment<TItem>(item: ITilesGridSegment<TItem> | ITilesHeaderItem<TItem>): item is ITilesGridSegment<TItem> {
+  return !!(item as ITilesGridSegment<TItem>).items;
 }
