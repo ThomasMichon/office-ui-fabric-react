@@ -1,9 +1,9 @@
 
 import * as React from 'react';
-import { ITilesListProps, ITilesGridItem, ITilesHeaderItem, ITilesGridSegment, TilesGridMode } from './TilesList.Props';
+import { ITilesListProps, ITilesHeaderItem, ITilesGridSegment, TilesGridMode } from './TilesList.Props';
 import { List } from '../../List';
 import { FocusZone, FocusZoneDirection } from '../../FocusZone';
-import { SelectionZone, Selection, SelectionMode } from '../../utilities/selection/index';
+import { SelectionZone, SelectionMode } from '../../utilities/selection/index';
 import { autobind, css } from '../../Utilities';
 import * as TilesListStylesModule from './TilesList.scss';
 

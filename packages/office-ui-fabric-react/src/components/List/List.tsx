@@ -8,9 +8,11 @@ import {
   findScrollableParent,
   getParent,
   divProperties,
-  getNativeProps
+  getNativeProps,
+  IRenderFunction,
+  autobind
 } from '../../Utilities';
-import { IList, IListProps, IPage } from './List.Props';
+import { IList, IListProps, IPage, IPageProps } from './List.Props';
 
 const RESIZE_DELAY = 16;
 const MIN_SCROLL_UPDATE_DELAY = 100;
@@ -294,22 +296,37 @@ export class List extends BaseComponent<IListProps, IListState> implements IList
   }
 
   public render() {
-    let { className, role, surfaceClassName } = this.props;
-    let { pages } = this.state;
+    const {
+      className,
+      role,
+      surfaceClassName,
+      onRenderPage = this._onRenderPage,
+      getPageClassName
+    } = this.props;
+    const { pages } = this.state;
     let pageElements = [];
     let divProps = getNativeProps(this.props, divProperties);
 
-    // assign list if no role
-    role = (role === undefined) ? 'list' : role;
-
-    for (let i = 0; i < pages.length; i++) {
-      pageElements.push(this._renderPage(pages[i]));
+    for (const page of pages) {
+      pageElements.push(onRenderPage({
+        page: page,
+        role: 'presentation',
+        className: css('ms-List-page', getPageClassName && getPageClassName(page)),
+        key: page.key,
+        ref: page.key,
+        style: this._getPageStyle(page)
+      }, this._onRenderPage));
     }
 
     // console.log(`Page elements ${pageElements.length}`);
 
     return (
-      <div ref='root' { ...divProps } role={ role } className={ css('ms-List', className) } >
+      <div
+        ref='root'
+        { ...divProps }
+        role={ (role === undefined) ? 'list' : role }
+        className={ css('ms-List', className) }
+      >
         <div ref='surface' className={ css('ms-List-surface', surfaceClassName) } role='presentation'>
           { pageElements }
         </div>
@@ -317,49 +334,54 @@ export class List extends BaseComponent<IListProps, IListState> implements IList
     );
   }
 
-  private _renderPage(page: IPage): any {
-    let {
+  @autobind
+  private _onRenderPage(pageProps: IPageProps, defaultRender?: IRenderFunction<IPageProps>): any {
+    const {
       onRenderCell,
       role,
       getCellStyle,
-      getPageClassName,
       getCellClassName
     } = this.props;
-    let cells = [];
-    let pageStyle = this._getPageStyle(page);
+
+    const {
+      page,
+      ...divProps
+    } = pageProps;
+
+    const {
+      items,
+      startIndex
+    } = page;
 
     // only assign list item role if no role is assigned
-    role = (role === undefined) ? 'listitem' : 'presentation';
+    const cellRole = (role === undefined) ? 'listitem' : 'presentation';
 
-    for (let i = 0; page.items && i < page.items.length; i++) {
-      let item = page.items[i];
-      const index = page.startIndex + i;
-      let itemKey =
-        this.props.getKey
-          ? this.props.getKey(item, index)
-          : item && item.key;
+    const cells = (items || []).map((item: any, offset: number) => {
+      const index = startIndex + offset;
+
+      let itemKey = this.props.getKey ?
+        this.props.getKey(item, index) :
+        item && item.key;
 
       if (itemKey === null || itemKey === undefined) {
         itemKey = index;
       }
 
-      cells.push(
-        <div role={ role }
+      return (
+        <div role={ cellRole }
           className={ css('ms-List-cell', getCellClassName && getCellClassName(item, page.startIndex + 1)) }
           style={ getCellStyle && getCellStyle(item, page.startIndex + 1) || {} }
           key={ itemKey }
-          data-list-index={ i + page.startIndex }
+          data-list-index={ index }
           data-automationid='ListCell'>
-          { onRenderCell(item, page.startIndex + i) }
+          { onRenderCell(item, index) }
         </div>
       );
-    }
+    });
 
     return (
-      <div role='presentation'
-        className={ css('ms-List-page', getPageClassName && getPageClassName(page)) }
-        key={ page.key } ref={ page.key }
-        style={ pageStyle }>
+      <div
+        { ...divProps }>
         { cells }
       </div>
     );

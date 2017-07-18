@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { IRectangle } from '../../Utilities';
+import { IRectangle, IRenderFunction } from '../../Utilities';
 import { List } from './List';
 
 export interface IList {
@@ -83,6 +83,8 @@ export interface IListProps extends React.HTMLAttributes<List | HTMLDivElement> 
   getCellClassName?: (item: any, index: number) => string;
 
   surfaceClassName?: string;
+
+  onRenderPage?: (pageProps: IPageProps, defaultRender?: IRenderFunction<IPageProps>) => React.ReactNode;
 }
 
 export interface IPage {
@@ -93,4 +95,8 @@ export interface IPage {
   style: any;
   top: number;
   height: number;
+}
+
+export interface IPageProps extends React.HTMLProps<HTMLDivElement> {
+  page: IPage;
 }
