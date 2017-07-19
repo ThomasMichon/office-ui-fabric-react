@@ -1,50 +1,66 @@
 
 import * as React from 'react';
 import { ITilesListProps, ITilesHeaderItem, ITilesGridSegment, TilesGridMode } from './TilesList.Props';
-import { List } from '../../List';
+import { List, IPageProps } from '../../List';
 import { FocusZone, FocusZoneDirection } from '../../FocusZone';
 import { SelectionZone, SelectionMode } from '../../utilities/selection/index';
-import { autobind, css } from '../../Utilities';
+import { autobind, css, IRenderFunction, IRectangle } from '../../Utilities';
 import * as TilesListStylesModule from './TilesList.scss';
 
 const TilesListStyles: any = TilesListStylesModule;
 
-export interface ITilesListState {
-
+export interface ITilesListState<TItem> {
+  cells: ITileCell<TItem>[];
 }
 
-interface ITileCell<TItem> {
-  content: TItem;
-  aspectRatio: number;
+export interface ITileGrid {
   rowHeight: number;
   mode: TilesGridMode;
   margin: number;
+  key: string;
+}
+
+export interface ITileCell<TItem> {
+  content: TItem;
+  aspectRatio: number;
+  grid: ITileGrid;
   onRender(content: TItem, finalSize: { width: number; height: number; }): React.ReactNode | React.ReactNode[];
 }
 
-export class TilesList<TItem> extends React.Component<ITilesListProps<TItem>, ITilesListState> {
+export class TilesList<TItem> extends React.Component<ITilesListProps<TItem>, ITilesListState<TItem>> {
   constructor(props: ITilesListProps<TItem>, context: any) {
     super(props, context);
+
+    this.state = {
+      cells: this._getCells(props.items)
+    };
+  }
+
+  public componentWillReceiveProps(nextProps: ITilesListProps<TItem>) {
+    if (nextProps.items !== this.props.items) {
+      this.setState({
+        cells: this._getCells(nextProps.items)
+      });
+    }
   }
 
   public render() {
     const {
-      items,
       selection
     } = this.props;
 
-    const cells = this._getCells(items);
+    const {
+      cells
+    } = this.state;
 
     const list = (
       <List
         items={ cells }
         onRenderCell={ this._onRenderCell }
         getCellClassName={ this._onGetCellClassName }
-        getPageClassName={ this._onGetPageClassName }
-        getPageStyle={ this._onGetPageStyle }
         getCellStyle={ this._onGetCellStyle }
-        getItemCountForPage={ this._onGetItemCountPerPage }
-        surfaceClassName={ TilesListStyles.listSurface }
+        getPage={ this._getPage }
+        onRenderPage={ this._onRenderPage }
       />
     );
 
@@ -91,13 +107,199 @@ export class TilesList<TItem> extends React.Component<ITilesListProps<TItem>, IT
   }
 
   @autobind
-  private _onGetItemCountPerPage(): number {
-    return 100;
+  private _onRenderPage(pageProps: IPageProps, defaultRender?: IRenderFunction<IPageProps>) {
+    const {
+      page,
+      ...divProps
+    } = pageProps;
+
+    const {
+      items
+    } = page;
+
+    const data: {
+      startCells: {
+        [index: number]: boolean;
+      };
+      extraCells: ITileCell<TItem>[];
+    } = page.data;
+
+    const cells: ITileCell<TItem>[] = items || [];
+
+    let grids: React.ReactNode[] = [];
+
+    const previousCell = this.state.cells[page.startIndex - 1];
+    const nextCell = this.state.cells[page.startIndex + page.itemCount];
+
+    const endIndex = cells.length;
+
+    for (let i = 0; i < endIndex;) {
+      const grid = cells[i].grid;
+
+      const renderedCells: React.ReactNode[] = [];
+
+      for (; i < endIndex && cells[i].grid === grid; i++) {
+        const cell = cells[i];
+
+        renderedCells.push(
+          <div
+            key={ `${grid.key}-item-${i}` }
+            data-item-index={ page.startIndex + i }
+            className={ css('ms-List-cell', this._onGetCellClassName()) }
+            style={
+              {
+                ...this._onGetCellStyle(cell),
+                outline: data.startCells[page.startIndex + i] ? '1px solid blue' : ''
+              }
+            }
+          >
+            { this._onRenderCell(cell) }
+          </div>
+        );
+      }
+
+      /*
+      if (data.extraCells) {
+        let j = 0;
+
+        for (const extraCell of data.extraCells) {
+          renderedCells.push(
+            <div
+              key={ `${grid.key}-item-extra-${j}` }
+              data-extra-index={ j }
+              data-item-index={ this.state.cells.indexOf(extraCell) }
+              className={ css('ms-List-cell', this._onGetCellClassName()) }
+              style={
+                {
+                  ...this._onGetCellStyle(extraCell),
+                  outline: '1px solid red'
+                }
+              }
+            >
+              { this._onRenderCell(extraCell) }
+            </div>
+          );
+
+          j++;
+        }
+      }
+      */
+
+      const isOpenStart = previousCell && previousCell.grid === grid;
+      const isOpenEnd = nextCell && nextCell.grid === grid;
+
+      grids.push(
+        <div
+          key={ grid.key }
+          className={ css('ms-TilesList-grid') }
+          style={
+            {
+              display: 'flex',
+              flexDirection: 'row',
+              flexFlow: 'row wrap',
+              flexItemAlign: 'flex-start',
+              justifyContent: 'flex-start',
+              alignContent: 'flex-start',
+              margin: `-${grid.margin}px`,
+              marginTop: isOpenStart ? '0' : `-${grid.margin}px`,
+              marginBottom: isOpenEnd ? '0' : `-${grid.margin}px`
+            }
+          }>
+          { ...renderedCells }
+        </div>
+      );
+    }
+
+    return (
+      <div
+        { ...divProps }
+      >
+        { ...grids }
+      </div>
+    );
   }
 
   @autobind
-  private _onGetPageClassName(): string {
-    return TilesListStyles.listPage;
+  private _getPage(startIndex: number, bounds: IRectangle): {
+    itemCount: number;
+    data: {
+      startCells: {
+        [index: number]: boolean;
+      };
+      extraCells: ITileCell<TItem>[];
+    };
+  } {
+    const {
+      cells
+    } = this.state;
+
+    const endIndex = Math.min(cells.length, startIndex + 100);
+
+    let rowWidth = 0;
+    let rowStart: number;
+    let fillPercent: number;
+    let i = startIndex;
+
+    let isAtGridEnd = true;
+
+    let startCells: {
+      [index: number]: boolean;
+    } = {};
+
+    let extraCells: ITileCell<TItem>[];
+
+    for (; i < endIndex;) {
+      const grid = cells[i].grid;
+
+      rowWidth = 0;
+      rowStart = i;
+
+      const boundsWidth = bounds.width + 2 * grid.margin;
+
+      if (grid.mode === TilesGridMode.none) {
+        isAtGridEnd = true;
+        fillPercent = 1;
+        i++;
+        continue;
+      }
+
+      startCells[i] = true;
+
+      for (; i < endIndex && cells[i].grid === grid; i++) {
+        const cell = cells[i];
+
+        const width = cell.aspectRatio * grid.rowHeight + 2 * grid.margin;
+        rowWidth += width;
+        fillPercent = rowWidth / boundsWidth;
+
+        if (rowWidth > boundsWidth) {
+          rowWidth = width;
+          fillPercent = rowWidth / boundsWidth;
+          rowStart = i;
+          startCells[i] = true;
+        }
+      }
+
+      if (cells[i] && cells[i].grid === grid) {
+        isAtGridEnd = false;
+      }
+
+      if (fillPercent > 0 && fillPercent < 0.9 && !isAtGridEnd) {
+        extraCells = cells.slice(rowStart, i);
+      }
+    }
+
+    let itemCount = fillPercent > 0 && fillPercent < 0.9 && !isAtGridEnd ?
+      rowStart - startIndex :
+      i - startIndex;
+
+    return {
+      itemCount: itemCount,
+      data: {
+        startCells: startCells,
+        extraCells: extraCells
+      }
+    };
   }
 
   @autobind
@@ -106,26 +308,19 @@ export class TilesList<TItem> extends React.Component<ITilesListProps<TItem>, IT
   }
 
   @autobind
-  private _onGetPageStyle(): any {
-    return {};
-  }
-
-  @autobind
   private _onGetCellStyle(item: ITileCell<TItem>): any {
     const itemWidthOverHeight = item.aspectRatio || 1;
     const itemHeightOverWidth = 1 / itemWidthOverHeight;
-    const margin = item.margin;
+    const margin = item.grid.margin;
 
-    const isFill = item.mode === TilesGridMode.fill;
+    const isFill = item.grid.mode === TilesGridMode.fill;
 
-    const height = item.rowHeight;
+    const height = item.grid.rowHeight;
     const width = itemWidthOverHeight * height;
 
     return {
-      flex: `${itemWidthOverHeight} ${itemWidthOverHeight} ${width}px`,
-      minHeight: `${height}px`,
-      minWidth: `${width}px`,
-      maxWidth: isFill ? `${width * 1.2}px` : `${width}px`,
+      flex: isFill ? `${itemWidthOverHeight} ${itemWidthOverHeight} ${width}px` : `0 0 ${width}px`,
+      maxWidth: isFill ? `${width * 1.5}px` : `${width}px`,
       margin: `${margin}px`
     };
   }
@@ -133,16 +328,23 @@ export class TilesList<TItem> extends React.Component<ITilesListProps<TItem>, IT
   private _getCells(items: (ITilesGridSegment<TItem> | ITilesHeaderItem<TItem>)[]): ITileCell<TItem>[] {
     const cells: ITileCell<TItem>[] = [];
 
+    let index = 0;
+
     for (const item of items) {
       if (isGridSegment(item)) {
+        const grid: ITileGrid = {
+          rowHeight: item.rowHeight,
+          margin: item.margin,
+          mode: item.mode,
+          key: `grid-${index++}`
+        };
+
         for (const gridItem of item.items) {
           cells.push({
             aspectRatio: gridItem.desiredSize.width / gridItem.desiredSize.height,
             content: gridItem.content,
             onRender: gridItem.onRender,
-            rowHeight: item.rowHeight,
-            margin: item.margin,
-            mode: item.mode
+            grid: grid
           });
         }
       } else {
@@ -150,9 +352,12 @@ export class TilesList<TItem> extends React.Component<ITilesListProps<TItem>, IT
           aspectRatio: 1,
           content: item.content,
           onRender: item.onRender,
-          rowHeight: 0,
-          margin: 0,
-          mode: TilesGridMode.fill
+          grid: {
+            rowHeight: 0,
+            margin: 0,
+            mode: TilesGridMode.none,
+            key: `header- ${index++}`
+          }
         });
       }
     }

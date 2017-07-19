@@ -15,6 +15,7 @@ export interface ITilesGridItem<TItem> {
 }
 
 export const enum TilesGridMode {
+  none,
   stack,
   fill
 }
