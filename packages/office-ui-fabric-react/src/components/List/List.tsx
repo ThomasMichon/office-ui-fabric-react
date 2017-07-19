@@ -171,7 +171,14 @@ export class List extends BaseComponent<IListProps, IListState> implements IList
 
     let itemsPerPage = 1;
     for (let itemIndex = startIndex; itemIndex < endIndex; itemIndex += itemsPerPage) {
-      itemsPerPage = this._getItemCountForPage(itemIndex, this._allowedRect);
+      const pageData = this._getPage(itemIndex, this._allowedRect);
+
+      let pageHeight: number;
+
+      ({
+        itemCount: itemsPerPage,
+        height: pageHeight
+      } = pageData);
 
       const requestedIndexIsInPage = itemIndex <= index && (itemIndex + itemsPerPage) > index;
       if (requestedIndexIsInPage) {
@@ -224,7 +231,7 @@ export class List extends BaseComponent<IListProps, IListState> implements IList
         break;
       }
 
-      scrollTop += this._getPageHeight(itemIndex, itemsPerPage, this._surfaceRect);
+      scrollTop += pageHeight;
     }
   }
 
@@ -369,8 +376,8 @@ export class List extends BaseComponent<IListProps, IListState> implements IList
 
       return (
         <div role={ cellRole }
-          className={ css('ms-List-cell', getCellClassName && getCellClassName(item, page.startIndex + 1)) }
-          style={ getCellStyle && getCellStyle(item, page.startIndex + 1) || {} }
+          className={ css('ms-List-cell', getCellClassName && getCellClassName(item, index)) }
+          style={ getCellStyle && getCellStyle(item, index) || {} }
           key={ itemKey }
           data-list-index={ index }
           data-automationid='ListCell'>
@@ -628,9 +635,15 @@ export class List extends BaseComponent<IListProps, IListState> implements IList
     let isFirstRender = this._estimatedPageHeight === 0 && !this.props.getPageHeight;
 
     for (let itemIndex = startIndex; itemIndex < endIndex; itemIndex += itemsPerPage) {
-      itemsPerPage = this._getItemCountForPage(itemIndex, this._allowedRect);
+      let pageHeight: number;
+      let pageData: any;
 
-      let pageHeight = this._getPageHeight(itemIndex, itemsPerPage, this._surfaceRect);
+      ({
+        itemCount: itemsPerPage,
+        height: pageHeight,
+        data: pageData
+      } = this._getPage(itemIndex, this._allowedRect));
+
       let pageBottom = pageTop + pageHeight - 1;
 
       let isPageRendered = findIndex(this.state.pages, (page) => page.items && page.startIndex === itemIndex) > -1;
@@ -650,7 +663,7 @@ export class List extends BaseComponent<IListProps, IListState> implements IList
         }
 
         let itemsInPage = Math.min(itemsPerPage, endIndex - itemIndex);
-        let newPage = this._createPage(null, items.slice(itemIndex, itemIndex + itemsInPage), itemIndex);
+        let newPage = this._createPage(null, items.slice(itemIndex, itemIndex + itemsInPage), itemIndex, undefined, undefined, pageData);
 
         newPage.top = pageTop;
         newPage.height = pageHeight;
@@ -670,7 +683,7 @@ export class List extends BaseComponent<IListProps, IListState> implements IList
 
       } else {
         if (!currentSpacer) {
-          currentSpacer = this._createPage('spacer-' + itemIndex, null, itemIndex, 0);
+          currentSpacer = this._createPage('spacer-' + itemIndex, null, itemIndex, 0, undefined, pageData);
         }
         currentSpacer.height = (currentSpacer.height || 0) + (pageBottom - pageTop) + 1;
         currentSpacer.itemCount += itemsPerPage;
@@ -696,6 +709,41 @@ export class List extends BaseComponent<IListProps, IListState> implements IList
     };
   }
 
+  private _getPage(itemIndex: number, visibleRect: IRectangle): {
+    itemCount?: number;
+    height?: number;
+    data?: any;
+  } {
+    if (this.props.getPage) {
+      const pageData = this.props.getPage(itemIndex, visibleRect);
+
+      const {
+        itemCount = this._getItemCountForPage(itemIndex, visibleRect)
+      } = pageData;
+
+      const {
+        height = this._getPageHeight(itemIndex, itemCount, visibleRect)
+      } = pageData;
+
+      const {
+        data
+      } = pageData;
+
+      return {
+        itemCount: itemCount,
+        height: height,
+        data: data
+      };
+    } else {
+      const itemCount = this._getItemCountForPage(itemIndex, visibleRect);
+
+      return {
+        itemCount: itemCount,
+        height: this._getPageHeight(itemIndex, itemCount, visibleRect)
+      };
+    }
+  }
+
   /**
    * Get the pixel height of a give page. Will use the props getPageHeight first, and if not provided, fallback to
    * cached height, or estimated page height, or default page height.
@@ -716,7 +764,7 @@ export class List extends BaseComponent<IListProps, IListState> implements IList
     return itemsPerPage ? itemsPerPage : DEFAULT_ITEMS_PER_PAGE;
   }
 
-  private _createPage(pageKey: string, items: any[], startIndex?: number, count?: number, style?: any): IPage {
+  private _createPage(pageKey: string, items: any[], startIndex: number = -1, count: number = items ? items.length : 0, style: any = {}, data: any): IPage {
     pageKey = pageKey || ('page-' + startIndex);
 
     // Fill undefined cells because array.map will ignore undefined cells.
@@ -728,12 +776,13 @@ export class List extends BaseComponent<IListProps, IListState> implements IList
 
     return {
       key: pageKey,
-      startIndex: startIndex === undefined ? -1 : startIndex,
-      itemCount: (count === undefined) ? (items ? items.length : 0) : count,
+      startIndex: startIndex,
+      itemCount: count,
       items: items,
       style: style || {},
       top: 0,
-      height: 0
+      height: 0,
+      data: data
     };
   }
 
